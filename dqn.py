@@ -23,7 +23,7 @@ goal_score = 200
 log_interval = 10
 update_target = 100
 replay_memory_capacity = 10000
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 Transition = namedtuple('Transition', ('state', 'next_state', 'action', 'reward', 'mask'))
 
@@ -67,9 +67,9 @@ class QNet(nn.Module):
     def train_model(cls, online_net, target_net, optimizer, batch):
         states = torch.stack(batch.state)
         next_states = torch.stack(batch.next_state)
-        actions = torch.Tensor(batch.action).float()
-        rewards = torch.Tensor(batch.reward)
-        masks = torch.Tensor(batch.mask)
+        actions = torch.Tensor(batch.action).float().to(device)
+        rewards = torch.Tensor(batch.reward).to(device)
+        masks = torch.Tensor(batch.mask).to(device)
 
         pred = online_net(states).squeeze(1)
         next_pred = target_net(next_states).squeeze(1)
@@ -88,7 +88,7 @@ class QNet(nn.Module):
     def get_action(self, input):
         qvalue = self.forward(input)
         _, action = torch.max(qvalue, 1)
-        return action.numpy()[0]
+        return action.cpu().numpy()[0]
 
 
 def get_action(state, target_net, epsilon, env):
@@ -144,10 +144,10 @@ def main():
 
             action = get_action(state, target_net, epsilon, env)
             next_state, reward, done, _ = env.step(action)
-            next_state = np.append(state, next_state)[-num_inputs:]
+            next_state = np.append(state.cpu(), next_state)[-num_inputs:]
 
             next_state = torch.Tensor(next_state)
-            next_state = next_state.unsqueeze(0)
+            next_state = next_state.unsqueeze(0).to(device)
 
             mask = 0 if done else 1
             reward = reward if not done or score == 499 else -1

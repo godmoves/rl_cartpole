@@ -19,7 +19,7 @@ gamma = 0.99
 lr = 0.001
 goal_score = 200
 log_interval = 10
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 lambda_gae = 0.96
 epsilon_clip = 0.2
@@ -128,12 +128,12 @@ class PPO(nn.Module):
                 values = values.view(-1)
                 policies = policies.view(-1, net.num_outputs)
 
-                ratios = ((policies / old_policies_sample) * actions_sample.detach()).sum(dim=1)
+                ratios = ((policies / old_policies_sample) * actions_sample.detach().to(device)).sum(dim=1)
                 clipped_ratios = torch.clamp(ratios, min=1.0 - epsilon_clip, max=1.0 + epsilon_clip)
 
-                actor_loss = -torch.min(ratios * advantages_sample,
-                                        clipped_ratios * advantages_sample).sum()
-                critic_loss = (returns_sample.detach() - values).pow(2).sum()
+                actor_loss = -torch.min(ratios * advantages_sample.to(device),
+                                        clipped_ratios * advantages_sample.to(device)).sum()
+                critic_loss = (returns_sample.detach().to(device) - values).pow(2).sum()
                 policy_entropy = (torch.log(policies) * policies).sum(1, keepdim=True).mean()
                 loss = actor_loss + ciritic_coefficient * critic_loss - entropy_coefficient * policy_entropy
 
@@ -146,7 +146,7 @@ class PPO(nn.Module):
     def get_action(self, input):
         policy, _ = self.forward(input)
 
-        policy = policy[0].data.numpy()
+        policy = policy[0].cpu().data.numpy()
         action = np.random.choice(self.num_outputs, 1, p=policy)[0]
 
         return action
@@ -190,10 +190,10 @@ def main():
 
             action = net.get_action(state)
             next_state, reward, done, _ = env.step(action)
-            next_state = np.append(state, next_state)[-num_inputs:]
+            next_state = np.append(state.cpu(), next_state)[-num_inputs:]
 
             next_state = torch.Tensor(next_state)
-            next_state = next_state.unsqueeze(0)
+            next_state = next_state.unsqueeze(0).to(device)
 
             mask = 0 if done else 1
             reward = reward if not done or score == 499 else -1

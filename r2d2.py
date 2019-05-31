@@ -64,10 +64,10 @@ class LocalBuffer(object):
             length = len(self.local_memory)
             while len(self.local_memory) < sequence_length:
                 self.local_memory.append(Transition(
-                    torch.Tensor([0, 0]),
-                    torch.Tensor([0, 0]),
+                    torch.Tensor([0, 0]).to(device),
+                    torch.Tensor([0, 0]).to(device),
                     0, 0, 0, 0,
-                    torch.zeros([2, 1, 16]).view(2, -1)
+                    torch.zeros([2, 1, 16]).view(2, -1).to(device)
                 ))
             self.memory.append([self.local_memory, length])
             if mask == 0:
@@ -79,9 +79,8 @@ class LocalBuffer(object):
 
     def sample(self):
         episodes = self.memory
-        batch_state, batch_next_state, batch_action, batch_reward, batch_mask, batch_step, batch_rnn_state = [
-        ], [], [], [], [], [], []
-        lengths = []
+        lengths, batch_state, batch_next_state, batch_action = [], [], [], []
+        batch_reward, batch_mask, batch_step, batch_rnn_state = [], [], [], []
         for episode, length in episodes:
             batch = Transition(*zip(*episode))
 
@@ -95,7 +94,8 @@ class LocalBuffer(object):
 
             lengths.append(length)
         self.memory = []
-        return Transition(batch_state, batch_next_state, batch_action, batch_reward, batch_mask, batch_step, batch_rnn_state), lengths
+        return Transition(batch_state, batch_next_state, batch_action,
+                          batch_reward, batch_mask, batch_step, batch_rnn_state), lengths
 
 
 class Memory(object):
@@ -121,7 +121,8 @@ class Memory(object):
 
         for i in range(len(batch)):
             self.memory.append([Transition(batch.state[i], batch.next_state[i], batch.action[i],
-                                           batch.reward[i], batch.mask[i], batch.step[i], batch.rnn_state[i]), lengths[i]])
+                                           batch.reward[i], batch.mask[i], batch.step[i],
+                                           batch.rnn_state[i]), lengths[i]])
             self.memory_probability.append(prior[i])
 
     def sample(self, batch_size):
@@ -133,7 +134,8 @@ class Memory(object):
         episodes = [self.memory[idx][0] for idx in indexes]
         lengths = [self.memory[idx][1] for idx in indexes]
 
-        batch_state, batch_next_state, batch_action, batch_reward, batch_mask, batch_step, batch_rnn_state = [], [], [], [], [], [], []
+        batch_state, batch_next_state, batch_action = [], [], []
+        batch_reward, batch_mask, batch_step, batch_rnn_state = [], [], [], []
         for episode in episodes:
             batch_state.append(episode.state)
             batch_next_state.append(episode.next_state)
@@ -143,7 +145,8 @@ class Memory(object):
             batch_step.append(episode.step)
             batch_rnn_state.append(episode.rnn_state)
 
-        return Transition(batch_state, batch_next_state, batch_action, batch_reward, batch_mask, batch_step, batch_rnn_state), indexes, lengths
+        return Transition(batch_state, batch_next_state, batch_action, batch_reward,
+                          batch_mask, batch_step, batch_rnn_state), indexes, lengths
 
     def update_prior(self, indexes, td_error, lengths):
         prior = self.td_error_to_prior(td_error, lengths)
@@ -260,7 +263,7 @@ class R2D2(nn.Module):
         qvalue, hidden = self.forward(state, hidden)
 
         _, action = torch.max(qvalue, 2)
-        return action.numpy()[0][0], hidden
+        return action.cpu().numpy()[0][0], hidden
 
 
 def get_action(state, target_net, epsilon, env, hidden):
@@ -313,8 +316,8 @@ def main():
         state = env.reset()
         state = torch.Tensor(state).to(device)
 
-        hidden = (torch.Tensor().new_zeros(1, 1, 16),
-                  torch.Tensor().new_zeros(1, 1, 16))
+        hidden = (torch.Tensor().new_zeros(1, 1, 16).to(device),
+                  torch.Tensor().new_zeros(1, 1, 16).to(device))
 
         while not done:
             steps += 1
