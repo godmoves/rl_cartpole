@@ -218,19 +218,11 @@ def main():
             print("Solved in {} episodes".format(e - 20))
             break
 
-    # plt.plot(score_list)
-    # plt.ylabel('Score')
-    # plt.xlabel('Episode #')
-    # plt.show()
-    return e - 20
+    plt.plot(score_list)
+    plt.ylabel('Score')
+    plt.xlabel('Episode #')
+    plt.show()
 
 
 if __name__ == '__main__':
-    e_list = []
-    for _ in range(20):
-        e = main()
-        e_list.append(e)
-    plt.plot(e_list)
-    plt.ylabel('number')
-    plt.xlabel('episodes')
-    plt.show()
+    main()

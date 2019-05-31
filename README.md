@@ -7,6 +7,18 @@
 - gym  
 - numpy
 
+## 运行
+
+对任务1直接运行代码即可：
+```
+python ppo.py
+```
+
+对任务2需要将代码中`is_reducce_ob`改为`True`，然后运行：
+```
+python ppo.py
+```
+
 ## 算法
 
 ### PPO
