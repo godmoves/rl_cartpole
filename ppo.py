@@ -1,7 +1,4 @@
-import os
 import random
-import sys
-import warnings
 from collections import namedtuple, deque
 
 import gym
@@ -43,10 +40,11 @@ class Memory(object):
 
     def sample(self):
         memory = self.memory
-        return Transition(*zip(*memory)) 
+        return Transition(*zip(*memory))
 
     def __len__(self):
         return len(self.memory)
+
 
 class BatchMaker():
     def __init__(self, states, actions, returns, advantages, old_policies):
@@ -55,7 +53,7 @@ class BatchMaker():
         self.returns = returns
         self.advantages = advantages
         self.old_policies = old_policies
-    
+
     def sample(self):
         sample_indexes = random.sample(range(len(self.states)), min(len(self.states), batch_size))
         states_sample = self.states[sample_indexes]
@@ -63,7 +61,7 @@ class BatchMaker():
         retruns_sample = self.returns[sample_indexes]
         advantages_sample = self.advantages[sample_indexes]
         old_policies_sample = self.old_policies[sample_indexes]
-        
+
         return states_sample, actions_sample, retruns_sample, advantages_sample, old_policies_sample
 
 
@@ -116,7 +114,7 @@ class PPO(nn.Module):
         actions = torch.stack(actions)
         rewards = torch.Tensor(rewards)
         masks = torch.Tensor(masks)
-        
+
         old_policies, old_values = net(states)
         old_policies = old_policies.view(-1, net.num_outputs).detach()
         returns, advantages = net.get_gae(old_values.view(-1).detach(), rewards, masks)
@@ -125,13 +123,13 @@ class PPO(nn.Module):
         for _ in range(epoch_k):
             for _ in range(max(len(states) // batch_size, 1)):
                 states_sample, actions_sample, returns_sample, advantages_sample, old_policies_sample = batch_maker.sample()
-                
+
                 policies, values = net(states_sample)
                 values = values.view(-1)
                 policies = policies.view(-1, net.num_outputs)
 
                 ratios = ((policies / old_policies_sample) * actions_sample.detach()).sum(dim=1)
-                clipped_ratios = torch.clamp(ratios, min=1.0-epsilon_clip, max=1.0+epsilon_clip)
+                clipped_ratios = torch.clamp(ratios, min=1.0 - epsilon_clip, max=1.0 + epsilon_clip)
 
                 actor_loss = -torch.min(ratios * advantages_sample,
                                         clipped_ratios * advantages_sample).sum()
@@ -142,15 +140,15 @@ class PPO(nn.Module):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-        
+
         return loss
 
     def get_action(self, input):
         policy, _ = self.forward(input)
-        
+
         policy = policy[0].data.numpy()
         action = np.random.choice(self.num_outputs, 1, p=policy)[0]
-        
+
         return action
 
 
@@ -172,7 +170,6 @@ def main():
 
     net.to(device)
     net.train()
-    running_score = 0
     steps = 0
     loss = 0
 

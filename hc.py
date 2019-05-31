@@ -23,11 +23,11 @@ search_rate = 1e-2
 class Policy():
     def __init__(self, state_size, action_size):
         self.w = 1e-4 * np.random.rand(state_size, action_size)
-        
+
     def forward(self, state):
         x = np.dot(state, self.w)
         return np.exp(x) / sum(np.exp(x))
-    
+
     def act(self, state):
         probs = self.forward(state)
         action = np.argmax(probs)
@@ -53,14 +53,14 @@ def hill_climbing(env, policy, max_e, max_t, gamma):
             state = np.append(prev_state, state)[-state_size:]
             prev_state = state
             if done:
-                break 
+                break
         scores_deque.append(sum(rewards))
         scores.append(sum(rewards))
 
         discounts = [gamma ** i for i in range(len(rewards) + 1)]
         R = sum([a * b for a, b in zip(discounts, rewards)])
 
-        if R >= best_R: # found better weights
+        if R >= best_R:  # found better weights
             best_R = R
             best_w = policy.w
             policy.w += learning_rate * np.random.rand(*policy.w.shape)
@@ -77,6 +77,7 @@ def hill_climbing(env, policy, max_e, max_t, gamma):
 
     return scores
 
+
 def main():
     env = ReduceObs(gym.make(env_name)) if is_reduce_ob else gym.make(env_name)
     # env.seed(500)
@@ -84,7 +85,7 @@ def main():
 
     print('state size:', state_size)
     print('action size:', action_size)
-    policy = Policy(state_size, action_size)       
+    policy = Policy(state_size, action_size)
     scores = hill_climbing(env, policy, max_episodes, max_timesteps, gamma)
 
     plt.plot(scores)

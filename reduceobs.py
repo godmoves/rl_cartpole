@@ -7,6 +7,7 @@ Simple RL tasks based on the CartPole env in OpenAI Gym
 
 import gym
 
+
 class ReduceObs(gym.ObservationWrapper):
     def __init__(self, env):
         """
@@ -45,10 +46,9 @@ if __name__ == '__main__':
             observation, reward, done, info = env.step(action)
             ep_reward += reward
             if done:
-                print("Episode {} finished with reward {}".format(i+1, ep_reward))
+                print("Episode {} finished with reward {}".format(i + 1, ep_reward))
                 break
     env.close()
-
 
     # Test the env of task 2
     env = ReduceObs(gym.make('CartPole-v1'))   # only Cart Position and Pole Angle can be observed

@@ -1,6 +1,4 @@
-import os
 import random
-import sys
 from collections import namedtuple, deque
 
 import gym
@@ -92,11 +90,13 @@ class QNet(nn.Module):
         _, action = torch.max(qvalue, 1)
         return action.numpy()[0]
 
+
 def get_action(state, target_net, epsilon, env):
     if np.random.rand() <= epsilon:
         return env.action_space.sample()
     else:
         return target_net.get_action(state)
+
 
 def update_target_model(online_net, target_net):
     target_net.load_state_dict(online_net.state_dict())
@@ -124,7 +124,6 @@ def main():
     online_net.train()
     target_net.train()
     memory = Memory(replay_memory_capacity)
-    running_score = 0
     epsilon = 1.0
     steps = 0
     loss = 0
@@ -185,4 +184,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
